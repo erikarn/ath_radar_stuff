@@ -7,7 +7,7 @@ SRCS+=	radiotap_iter.c chan.c
 # in the configuration file.  Ideally this would just fake an "opt_ath.h"
 # and include it, but I digress..
 
-CFLAGS+=	-I/home/adrian/work/freebsd/ath/head/src/sys -g -ggdb	\
+CFLAGS+=	-I/home/adrian/work/freebsd/head/src/sys -g -ggdb	\
 	    -DATH_ENABLE_RADIOTAP_VENDOR_EXT -g -ggdb -pthread
 
 NO_MAN=	1
