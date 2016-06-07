@@ -186,6 +186,11 @@ pkt_handle(int chip, const char *pkt, int len)
 
 	/* XXX assume it's a radiotap frame */
 	rh = (struct ieee80211_radiotap_header *) pkt;
+
+	/*
+	 * XXX assume it's an ath radiotap header; don't decode the payload
+	 * via a radiotap decoder!
+	 */
 	rx = (struct ath_rx_radiotap_header *) pkt;
 
 	if (rh->it_version != 0) {
@@ -208,7 +213,7 @@ pkt_handle(int chip, const char *pkt, int len)
 	 */
 	/* XXX rh->it_len should be endian checked?! */
 	if (pkt_lookup_chan((char *) pkt, len, &x) != 0) {
-		printf("%s: channel lookup failed\n", __func__);
+//		printf("%s: channel lookup failed\n", __func__);
 		return;
 	}
 
@@ -304,7 +309,7 @@ open_online(const char *ifname)
 		return (NULL);
 	}
 
-#if 1
+#if 0
 	if (pcap_setfilter(p, &fp) != 0) {
 		printf("pcap_setfilter failed\n");
 		return (NULL);
@@ -354,9 +359,6 @@ main(int argc, const char *argv[])
 		exit(255);
 
 	/*
-	 * Iterate over frames, looking for radiotap frames
-	 * which have PHY errors.
-	 *
 	 * XXX We should compile a filter for this, but the
 	 * XXX access method is a non-standard hack atm.
 	 */
