@@ -2,33 +2,23 @@
 #include <stdlib.h>
 #include <err.h>
 #include <string.h>
-#include <netinet/in.h>	/* for ntohl etc */
 #include <sys/endian.h>
-
-#include <sys/socket.h>
-#include <net/if.h>
 
 #include <pcap.h>
 
-#include "net80211/ieee80211.h"
-#include "net80211/ieee80211_radiotap.h"
-
-#include "dev/ath/if_athioctl.h"
-
-#if 0
-#include "libradarpkt/pkt.h"
-#include "libradarpkt/ar5212_radar.h"
-#include "libradarpkt/ar5416_radar.h"
-#include "libradarpkt/ar9280_radar.h"
-#endif
-
-#include "libradarpkt/chan.h"
+#include "libradiotap/radiotap.h"
+#include "libradiotap/radiotap_iter.h"
 
 #include "evm.h"
+#include "pkt.h"
 
-/* from _ieee80211.h */
-#define      IEEE80211_CHAN_HT40U    0x00020000 /* HT 40 channel w/ ext above */
-#define      IEEE80211_CHAN_HT40D    0x00040000 /* HT 40 channel w/ ext below */
+struct xchan {
+	uint32_t flags;
+	uint16_t freq;
+	uint8_t ieee;
+	uint8_t maxpow;
+} __packed;
+
 
 // non-HT
 // 0x00200140
@@ -57,103 +47,45 @@ pkt_compile(pcap_t *p, struct bpf_program *fp)
 void
 pkt_handle(int chip, const char *pkt, int len)
 {
-	struct ieee80211_radiotap_header *rh;
-	struct ath_rx_radiotap_header *rx;
-	uint8_t rssi, nf;
-	int r;
-	struct xchan x;
-	uint32_t evm[5];	/* XXX ATH_RADIOTAP_MAX_CHAINS */
-	uint8_t rx_chainmask;
-	uint8_t rx_hwrate;
-	int rx_isht40;
-	int rx_isht;
-	int rx_isaggr;
-	int rx_lastaggr;
-	struct evm e;
+	struct ieee80211_radiotap_iterator iter;
+	const struct ieee80211_radiotap_header *rh;
+	const void *vh = NULL;
+	int err;
+	uint32_t chan_flags;
+	uint64_t tsf;
+	struct xchan xc;
 
 	/* XXX assume it's a radiotap frame */
 	rh = (struct ieee80211_radiotap_header *) pkt;
 
-	/*
-	 * XXX assume it's an ath radiotap header; don't decode the payload
-	 * via a radiotap decoder!
-	 */
-	rx = (struct ath_rx_radiotap_header *) pkt;
-
-	if (rh->it_version != 0) {
-		printf("%s: incorrect version (%d)\n", __func__,
-		    rh->it_version);
+	err = ieee80211_radiotap_iterator_init(&iter, (void *) pkt, len, NULL);
+	if (err) {
+		fprintf(stderr, "%s: invalid radiotap header\n", __func__);
 		return;
 	}
 
-#if 0
-	printf("%s: len=%d, present=0x%08x\n",
-	    __func__,
-	    (rh->it_len),	/* XXX why aren't these endian-converted? */
-	    (rh->it_present));
-#endif
+	while (!(err = ieee80211_radiotap_iterator_next(&iter))) {
+		if (iter.this_arg_index == IEEE80211_RADIOTAP_VENDOR_NAMESPACE) {
+			vh = (char *) iter.this_arg + 6; /* XXX 6 byte vendor header */
+		} else if (iter.is_radiotap_ns) {
+			if (iter.this_arg_index == IEEE80211_RADIOTAP_TSFT) {
+				tsf = le64toh(*(unsigned long long *)iter.this_arg);
+			} else if (iter.this_arg_index == IEEE80211_RADIOTAP_XCHANNEL) {
+				/* XXX should limit copy size to this_arg's size */
+				memcpy(&xc, iter.this_arg, sizeof(xc));
+				/* XXX endian */
+				chan_flags = xc.flags;
+			}
+		} else {
+			printf("vendor ns\n");
+		}
+	}
+	//printf("done\n");
 
-	/* XXX TODO: check vh_flags to ensure this is an RX frame */
-
-	/*
-	 * Do a frequency lookup.
-	 */
-	/* XXX rh->it_len should be endian checked?! */
-	if (pkt_lookup_chan((char *) pkt, len, &x) != 0) {
-//		printf("%s: channel lookup failed\n", __func__);
+	if (vh == NULL)
 		return;
-	}
 
-	/*
-	 * Copy out the EVM data, receive rate, RX chainmask from the
-	 * header.
-	 *
-	 * XXX TODO: methodize this; endianness!
-	 */
-	memcpy(evm, pkt + 48, 4 * 4);
-	rx_chainmask = rx->wr_v.vh_rx_chainmask;
-	rx_hwrate = rx->wr_v.vh_rx_hwrate;
-	rx_isht40 = !! (rx->wr_chan_flags & (IEEE80211_CHAN_HT40U | IEEE80211_CHAN_HT40D));
-	rx_isht = !! (rx_hwrate & 0x80);
-
-	/*
-	 * If aggr=1, then we only care about lastaggr.
-	 * If aggr=0, then the stack will only pass us up a
-	 * completed frame, with the final descriptors' status.
-	 */
-
-	rx_isaggr = !! (rx->wr_v.vh_flags & ATH_VENDOR_PKT_ISAGGR);
-	rx_lastaggr = 0;
-	if ((rx->wr_v.vh_flags & ATH_VENDOR_PKT_ISAGGR) &&
-	    ! (rx->wr_v.vh_flags & ATH_VENDOR_PKT_MOREAGGR)) {
-		rx_lastaggr = 1;
-	}
-
-	if (rx_isht && (! rx_isaggr || rx_lastaggr)) {
-		populate_evm(&e, evm, rx_hwrate, rx_isht40);
-
-		printf("ts=%llu: rs_status=0x%x, chainmask=0x%x, "
-		    "hwrate=0x%02x, isht=%d, is40=%d, "
-		    "rssi_comb=%d, rssi_ctl=[%d %d %d], "
-		    "rssi_ext=[%d %d %d]",
-		    (unsigned long long) le64toh(rx->wr_tsf),
-		    (int) rx->wr_v.vh_rs_status,
-		    (int) rx->wr_v.vh_rx_chainmask,
-		    (int) rx->wr_v.vh_rx_hwrate,
-		    (int) rx_isht,
-		    (int) rx_isht40,
-		    (int) (int8_t) ((rx->wr_v.vh_rssi) & 0xff),
-		    (int) (int8_t) ((rx->wr_v.rssi_ctl[0]) & 0xff),
-		    (int) (int8_t) ((rx->wr_v.rssi_ctl[1]) & 0xff),
-		    (int) (int8_t) ((rx->wr_v.rssi_ctl[2]) & 0xff),
-		    (int) (int8_t) ((rx->wr_v.rssi_ext[0]) & 0xff),
-		    (int) (int8_t) ((rx->wr_v.rssi_ext[1]) & 0xff),
-		    (int) (int8_t) ((rx->wr_v.rssi_ext[2]) & 0xff)
-		    );
-		print_evm(&e);
-
-		printf("\n");
-	}
+	pkt_parse(chip, rh, vh, tsf, chan_flags, pkt, len);
 }
 
 static pcap_t *
