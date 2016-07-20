@@ -10,6 +10,6 @@ SRCS+=	chan.c
 CFLAGS+=	-I/home/adrian/work/freebsd/head/src/sys -g -ggdb	\
 	    -DATH_ENABLE_RADIOTAP_VENDOR_EXT -g -ggdb -pthread
 
-NO_MAN=	1
+MK_MAN=	no
 
 .include <bsd.lib.mk>
