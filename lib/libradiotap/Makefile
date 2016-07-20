@@ -1,6 +1,6 @@
 LIB=	radiotap
 
-SRCS=	parse.c radiotap.c
+SRCS=	radiotap.c
 
 NO_MAN=	1
 
