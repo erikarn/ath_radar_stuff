@@ -1,5 +1,5 @@
 .include <bsd.own.mk>
 
-SUBDIR=libradarpkt
+SUBDIR=libradarpkt libradiotap
 
 .include <bsd.subdir.mk>
