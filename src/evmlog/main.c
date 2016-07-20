@@ -136,7 +136,7 @@ pkt_handle(int chip, const char *pkt, int len)
 		    "hwrate=0x%02x, isht=%d, is40=%d, "
 		    "rssi_comb=%d, rssi_ctl=[%d %d %d], "
 		    "rssi_ext=[%d %d %d]",
-		    le64toh(rx->wr_tsf),
+		    (unsigned long long) le64toh(rx->wr_tsf),
 		    (int) rx->wr_v.vh_rs_status,
 		    (int) rx->wr_v.vh_rx_chainmask,
 		    (int) rx->wr_v.vh_rx_hwrate,
@@ -255,7 +255,7 @@ main(int argc, const char *argv[])
 		    hdr->len, hdr->caplen);
 #endif
 		if (r > 0)
-			pkt_handle(chip, pkt, hdr->caplen);
+			pkt_handle(chip, (const char *) pkt, hdr->caplen);
 	}
 
 	pcap_close(p);
