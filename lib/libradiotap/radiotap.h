@@ -92,6 +92,17 @@ struct ieee80211_radiotap_header {
  *
  *      Tx/Rx frequency in MHz, followed by flags (see below).
  *
+ * IEEE80211_RADIOTAP_XCHANNEL          uint32_t        bitmap
+ *                                      uint16_t        MHz
+ *                                      uint8_t         channel number
+ *                                      int8_t          .5 dBm
+ *
+ *      Extended channel specification: flags (see below) followed by
+ *      frequency in MHz, the corresponding IEEE channel number, and
+ *      finally the maximum regulatory transmit power cap in .5 dBm
+ *      units.  This property supersedes IEEE80211_RADIOTAP_CHANNEL
+ *      and only one of the two should be present.
+ *
  * IEEE80211_RADIOTAP_FHSS              uint16_t       see below
  *
  *      For frequency-hopping radios, the hop set (first byte)
@@ -203,7 +214,7 @@ enum ieee80211_radiotap_type {
 	IEEE80211_RADIOTAP_TX_FLAGS = 15,
 	IEEE80211_RADIOTAP_RTS_RETRIES = 16,
 	IEEE80211_RADIOTAP_DATA_RETRIES = 17,
-
+	IEEE80211_RADIOTAP_XCHANNEL = 18,
 	IEEE80211_RADIOTAP_MCS = 19,
 	IEEE80211_RADIOTAP_AMPDU_STATUS = 20,
 
