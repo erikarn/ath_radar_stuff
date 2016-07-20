@@ -2,6 +2,6 @@ LIB=	radiotap
 
 SRCS=	radiotap.c
 
-NO_MAN=	1
+MK_MAN=	no
 
 .include <bsd.lib.mk>
