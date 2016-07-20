@@ -8,7 +8,7 @@
 #include <fcntl.h>
 #include <unistd.h>
 #include <stdio.h>
-#include <endian.h>
+#include <sys/endian.h>
 #include <errno.h>
 #include <string.h>
 #include "radiotap_iter.h"
