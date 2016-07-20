@@ -33,6 +33,7 @@
 // HT, not HT40
 // 0x00210140
 
+#if 0
 /*
  * Compile up a rule that's bound to be useful - it only matches on
  * radar errors.
@@ -49,6 +50,7 @@ pkt_compile(pcap_t *p, struct bpf_program *fp)
 		return 0;
 	return 1;
 }
+#endif
 
 /*
  * Accessor macros to go dig through the DWORD for the relevant
@@ -304,12 +306,12 @@ open_online(const char *ifname)
 
 	/* XXX pcap_is_swapped() ? */
 
+#if 0
 	if (! pkt_compile(p, &fp)) {
 		pcap_perror(p, "pkg_compile compile error\n");
 		return (NULL);
 	}
 
-#if 0
 	if (pcap_setfilter(p, &fp) != 0) {
 		printf("pcap_setfilter failed\n");
 		return (NULL);
