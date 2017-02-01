@@ -33,7 +33,7 @@
  *    'radio[73] == 0x2 && (radio[72] == 5 || radio[72] == 24)
  */
 
-#define	PKTRULE "radio[73] == 0x2 && (radio[72] == 5 || radio[72] == 24)"
+#define	PKTRULE "radio[73] == 0x2 && (radio[72] == 5 || radio[72] == 24 || radio[72] == 36)"
 
 static int
 pkt_compile(pcap_t *p, struct bpf_program *fp)
