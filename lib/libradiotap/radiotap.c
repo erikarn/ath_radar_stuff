@@ -16,8 +16,6 @@
 #include "radiotap_iter.h"
 #include "platform.h"
 
-#include "net80211/ieee80211_radiotap.h"
-
 /* function prototypes and related defs are in radiotap_iter.h */
 
 static const struct radiotap_align_size rtap_namespace_sizes[] = {
@@ -40,8 +38,8 @@ static const struct radiotap_align_size rtap_namespace_sizes[] = {
 	[IEEE80211_RADIOTAP_RTS_RETRIES] = { .align = 1, .size = 1, },
 	[IEEE80211_RADIOTAP_DATA_RETRIES] = { .align = 1, .size = 1, },
 	[IEEE80211_RADIOTAP_MCS] = { .align = 1, .size = 3, },
-	[IEEE80211_RADIOTAP_XCHANNEL] = { .align = 8, .size = 8 },
 	[IEEE80211_RADIOTAP_AMPDU_STATUS] = { .align = 4, .size = 8, },
+	[IEEE80211_RADIOTAP_XCHANNEL] = { .align = 4, .size = 8, },
 	/*
 	 * add more here as they are defined in radiotap.h
 	 */
@@ -95,6 +93,10 @@ int ieee80211_radiotap_iterator_init(
 	struct ieee80211_radiotap_header *radiotap_header,
 	int max_length, const struct ieee80211_radiotap_vendor_namespaces *vns)
 {
+	/* must at least have the radiotap header */
+	if (max_length < (int)sizeof(struct ieee80211_radiotap_header))
+		return -EINVAL;
+
 	/* Linux only supports version 0 radiotap format */
 	if (radiotap_header->it_version)
 		return -EINVAL;
@@ -122,6 +124,10 @@ int ieee80211_radiotap_iterator_init(
 	/* find payload start allowing for extended bitmap(s) */
 
 	if (iterator->_bitmap_shifter & (1<<IEEE80211_RADIOTAP_EXT)) {
+		if ((unsigned long)iterator->_arg -
+		    (unsigned long)iterator->_rtheader + sizeof(uint32_t) >
+		    (unsigned long)iterator->_max_length)
+			return -EINVAL;
 		while (get_unaligned_le32(iterator->_arg) &
 					(1 << IEEE80211_RADIOTAP_EXT)) {
 			iterator->_arg += sizeof(uint32_t);
@@ -133,7 +139,8 @@ int ieee80211_radiotap_iterator_init(
 			 */
 
 			if ((unsigned long)iterator->_arg -
-			    (unsigned long)iterator->_rtheader >
+			    (unsigned long)iterator->_rtheader +
+			    sizeof(uint32_t) >
 			    (unsigned long)iterator->_max_length)
 				return -EINVAL;
 		}
@@ -245,7 +252,7 @@ int ieee80211_radiotap_iterator_next(
 			align = 1;
 			size = 0;
 			break;
-		case IEEE80211_RADIOTAP_VENDOREXT:
+		case IEEE80211_RADIOTAP_VENDOR_NAMESPACE:
 			align = 2;
 			size = 6;
 			break;
@@ -292,7 +299,7 @@ int ieee80211_radiotap_iterator_next(
 		if (pad)
 			iterator->_arg += align - pad;
 
-		if (iterator->_arg_index % 32 == IEEE80211_RADIOTAP_VENDOREXT) {
+		if (iterator->_arg_index % 32 == IEEE80211_RADIOTAP_VENDOR_NAMESPACE) {
 			int vnslen;
 
 			if ((unsigned long)iterator->_arg + size -
@@ -338,7 +345,7 @@ int ieee80211_radiotap_iterator_next(
 
 		/* these special ones are valid in each bitmap word */
 		switch (iterator->_arg_index % 32) {
-		case IEEE80211_RADIOTAP_VENDOREXT:
+		case IEEE80211_RADIOTAP_VENDOR_NAMESPACE:
 			iterator->_reset_on_ext = 1;
 
 			iterator->is_radiotap_ns = 0;
@@ -349,7 +356,7 @@ int ieee80211_radiotap_iterator_next(
 			 * to vendor namespace.
 			 */
 			iterator->this_arg_index =
-				IEEE80211_RADIOTAP_VENDOREXT;
+				IEEE80211_RADIOTAP_VENDOR_NAMESPACE;
 			if (!iterator->current_namespace)
 				hit = 1;
 			goto next_entry;

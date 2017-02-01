@@ -2,37 +2,30 @@
 #include <stdlib.h>
 #include <err.h>
 #include <string.h>
-#include <netinet/in.h>	/* for ntohl etc */
 #include <sys/endian.h>
-
-#include <sys/socket.h>
-#include <net/if.h>
 
 #include <pcap.h>
 
-#include "net80211/ieee80211.h"
-#include "net80211/ieee80211_radiotap.h"
+#include "libradiotap/radiotap.h"
+#include "libradiotap/radiotap_iter.h"
 
-#include "dev/ath/if_athioctl.h"
+#include "evm.h"
+#include "pkt.h"
 
-#if 0
-#include "libradarpkt/pkt.h"
-#include "libradarpkt/ar5212_radar.h"
-#include "libradarpkt/ar5416_radar.h"
-#include "libradarpkt/ar9280_radar.h"
-#endif
+struct xchan {
+	uint32_t flags;
+	uint16_t freq;
+	uint8_t ieee;
+	uint8_t maxpow;
+} __packed;
 
-#include "libradarpkt/chan.h"
-
-/* from _ieee80211.h */
-#define      IEEE80211_CHAN_HT40U    0x00020000 /* HT 40 channel w/ ext above */
-#define      IEEE80211_CHAN_HT40D    0x00040000 /* HT 40 channel w/ ext below */
 
 // non-HT
 // 0x00200140
 // HT, not HT40
 // 0x00210140
 
+#if 0
 /*
  * Compile up a rule that's bound to be useful - it only matches on
  * radar errors.
@@ -49,224 +42,50 @@ pkt_compile(pcap_t *p, struct bpf_program *fp)
 		return 0;
 	return 1;
 }
-
-/*
- * Accessor macros to go dig through the DWORD for the relevant
- * EVM bytes.
- */
-#define	MS(_v, _f)		( ((_v) & (_f)) >> _f ## _S )
-
-#define	EVM_0		0x000000ff
-#define	EVM_0_S		0
-#define	EVM_1		0x0000ff00
-#define	EVM_1_S		8
-#define	EVM_2		0x00ff0000
-#define	EVM_2_S		16
-#define	EVM_3		0xff000000
-#define	EVM_3_S		24
-
-/*
- * The EVM pilot information representation, post-processed.
- */
-#define	NUM_EVM_PILOTS		6
-#define	NUM_EVM_STREAMS		3
-struct evm {
-	int8_t	evm_pilots[NUM_EVM_STREAMS][NUM_EVM_PILOTS];
-	int num_pilots;
-	int num_streams;
-};
-
-/* Print the EVM information */
-static void
-print_evm(struct evm *e)
-{
-	int s, p;
-
-	for (s = 0; s < e->num_streams; s++) {
-		printf(" evm_stream_%d=[", s + 1);
-		for (p = 0; p < NUM_EVM_PILOTS; p++) {
-			printf(" %d", (int) (e->evm_pilots[s][p]));
-		}
-		printf(" ]");
-	}
-}
-
-/*
- * Populate the given EVM information.
- *
- * The EVM pilot offsets depend upon whether the rates are
- * 1, 2 or 3 stream, as well as HT20 or HT40.
- */
-static void
-populate_evm(struct evm *e, uint32_t evm[4], uint8_t rx_hwrate, int rx_isht40)
-{
-	/* Initialise everything to 0x80 - invalid */
-	memset(e->evm_pilots, 0x80, sizeof(e->evm_pilots));
-
-	/* HT20 pilots - always 4 */
-	e->num_pilots = 4;
-	if (rx_isht40)
-		e->num_pilots += 2;	/* HT40 - 6 pilots */
-
-	/* XXX assume it's MCS */
-	if (rx_hwrate < 0x88) {		/* 1 stream */
-		e->num_streams = 1;
-		e->evm_pilots[0][0] = MS(evm[0], EVM_0);
-		e->evm_pilots[0][1] = MS(evm[0], EVM_1);
-		e->evm_pilots[0][2] = MS(evm[0], EVM_2);
-		e->evm_pilots[0][3] =
-		    MS(evm[0], EVM_3);
-		if (rx_isht40) {
-			e->evm_pilots[0][4] = MS(evm[1], EVM_0),
-			e->evm_pilots[0][5] = MS(evm[1], EVM_1);
-		}
-	} else if (rx_hwrate < 0x90) {	/* 2 stream */
-		e->num_streams = 2;
-		e->evm_pilots[0][0] = MS(evm[0], EVM_0);
-		e->evm_pilots[0][1] = MS(evm[0], EVM_2);
-		e->evm_pilots[0][2] = MS(evm[1], EVM_0);
-		e->evm_pilots[0][3] = MS(evm[1], EVM_2);
-		if (rx_isht40) {
-			e->evm_pilots[0][4] = MS(evm[2], EVM_0),
-			e->evm_pilots[0][5] = MS(evm[2], EVM_2);
-		}
-		e->evm_pilots[1][0] = MS(evm[0], EVM_1);
-		e->evm_pilots[1][1] = MS(evm[0], EVM_3);
-		e->evm_pilots[1][2] = MS(evm[1], EVM_1);
-		e->evm_pilots[1][3] = MS(evm[1], EVM_3);
-		if (rx_isht40) {
-			e->evm_pilots[1][4] = MS(evm[2], EVM_1);
-			e->evm_pilots[1][5] = MS(evm[2], EVM_3);
-		}
-	} else {			/* 3 stream */
-		e->num_streams = 3;
-		e->evm_pilots[0][0] = MS(evm[0], EVM_0);
-		e->evm_pilots[0][1] = MS(evm[0], EVM_3);
-		e->evm_pilots[0][2] = MS(evm[1], EVM_2);
-		e->evm_pilots[0][3] = MS(evm[2], EVM_1);
-		if (rx_isht40) {
-			e->evm_pilots[0][4] = MS(evm[3], EVM_0);
-			e->evm_pilots[0][5] = MS(evm[3], EVM_3);
-		}
-		e->evm_pilots[1][0] = MS(evm[0], EVM_1);
-		e->evm_pilots[1][1] = MS(evm[1], EVM_0);
-		e->evm_pilots[1][2] = MS(evm[1], EVM_3);
-		e->evm_pilots[1][3] = MS(evm[2], EVM_2);
-		if (rx_isht40) {
-			e->evm_pilots[1][4] = MS(evm[3], EVM_1);
-			e->evm_pilots[1][5] = MS(evm[4], EVM_0);
-		}
-		e->evm_pilots[2][0] = MS(evm[0], EVM_2);
-		e->evm_pilots[2][1] = MS(evm[1], EVM_1);
-		e->evm_pilots[2][2] = MS(evm[2], EVM_0);
-		e->evm_pilots[2][3] = MS(evm[2], EVM_3);
-		if (rx_isht40) {
-			e->evm_pilots[2][4] = MS(evm[3], EVM_2);
-			e->evm_pilots[2][5] = MS(evm[4], EVM_1);
-		}
-	}
-}
+#endif
 
 void
 pkt_handle(int chip, const char *pkt, int len)
 {
-	struct ieee80211_radiotap_header *rh;
-	struct ath_rx_radiotap_header *rx;
-	uint8_t rssi, nf;
-	int r;
-	struct xchan x;
-	uint32_t evm[5];	/* XXX ATH_RADIOTAP_MAX_CHAINS */
-	uint8_t rx_chainmask;
-	uint8_t rx_hwrate;
-	int rx_isht40;
-	int rx_isht;
-	int rx_isaggr;
-	int rx_lastaggr;
-	struct evm e;
+	struct ieee80211_radiotap_iterator iter;
+	const struct ieee80211_radiotap_header *rh;
+	const void *vh = NULL;
+	int err;
+	uint32_t chan_flags;
+	uint64_t tsf;
+	struct xchan xc;
 
 	/* XXX assume it's a radiotap frame */
 	rh = (struct ieee80211_radiotap_header *) pkt;
 
-	/*
-	 * XXX assume it's an ath radiotap header; don't decode the payload
-	 * via a radiotap decoder!
-	 */
-	rx = (struct ath_rx_radiotap_header *) pkt;
-
-	if (rh->it_version != 0) {
-		printf("%s: incorrect version (%d)\n", __func__,
-		    rh->it_version);
+	err = ieee80211_radiotap_iterator_init(&iter, (void *) pkt, len, NULL);
+	if (err) {
+		fprintf(stderr, "%s: invalid radiotap header\n", __func__);
 		return;
 	}
 
-#if 0
-	printf("%s: len=%d, present=0x%08x\n",
-	    __func__,
-	    (rh->it_len),	/* XXX why aren't these endian-converted? */
-	    (rh->it_present));
-#endif
+	while (!(err = ieee80211_radiotap_iterator_next(&iter))) {
+		if (iter.this_arg_index == IEEE80211_RADIOTAP_VENDOR_NAMESPACE) {
+			vh = (char *) iter.this_arg + 6; /* XXX 6 byte vendor header */
+		} else if (iter.is_radiotap_ns) {
+			if (iter.this_arg_index == IEEE80211_RADIOTAP_TSFT) {
+				tsf = le64toh(*(unsigned long long *)iter.this_arg);
+			} else if (iter.this_arg_index == IEEE80211_RADIOTAP_XCHANNEL) {
+				/* XXX should limit copy size to this_arg's size */
+				memcpy(&xc, iter.this_arg, sizeof(xc));
+				/* XXX endian */
+				chan_flags = xc.flags;
+			}
+		} else {
+			printf("vendor ns\n");
+		}
+	}
+	//printf("done\n");
 
-	/* XXX TODO: check vh_flags to ensure this is an RX frame */
-
-	/*
-	 * Do a frequency lookup.
-	 */
-	/* XXX rh->it_len should be endian checked?! */
-	if (pkt_lookup_chan((char *) pkt, len, &x) != 0) {
-//		printf("%s: channel lookup failed\n", __func__);
+	if (vh == NULL)
 		return;
-	}
 
-	/*
-	 * Copy out the EVM data, receive rate, RX chainmask from the
-	 * header.
-	 *
-	 * XXX TODO: methodize this; endianness!
-	 */
-	memcpy(evm, pkt + 48, 4 * 4);
-	rx_chainmask = rx->wr_v.vh_rx_chainmask;
-	rx_hwrate = rx->wr_v.vh_rx_hwrate;
-	rx_isht40 = !! (rx->wr_chan_flags & (IEEE80211_CHAN_HT40U | IEEE80211_CHAN_HT40D));
-	rx_isht = !! (rx_hwrate & 0x80);
-
-	/*
-	 * If aggr=1, then we only care about lastaggr.
-	 * If aggr=0, then the stack will only pass us up a
-	 * completed frame, with the final descriptors' status.
-	 */
-
-	rx_isaggr = !! (rx->wr_v.vh_flags & ATH_VENDOR_PKT_ISAGGR);
-	rx_lastaggr = 0;
-	if ((rx->wr_v.vh_flags & ATH_VENDOR_PKT_ISAGGR) &&
-	    ! (rx->wr_v.vh_flags & ATH_VENDOR_PKT_MOREAGGR)) {
-		rx_lastaggr = 1;
-	}
-
-	if (1 || rx_isht && (! rx_isaggr || rx_lastaggr)) {
-		populate_evm(&e, evm, rx_hwrate, rx_isht40);
-
-		printf("ts=%llu: rs_status=0x%x, chainmask=0x%x, "
-		    "hwrate=0x%02x, isht=%d, is40=%d, "
-		    "rssi_comb=%d, rssi_ctl=[%d %d %d], "
-		    "rssi_ext=[%d %d %d]",
-		    le64toh(rx->wr_tsf),
-		    (int) rx->wr_v.vh_rs_status,
-		    (int) rx->wr_v.vh_rx_chainmask,
-		    (int) rx->wr_v.vh_rx_hwrate,
-		    (int) rx_isht,
-		    (int) rx_isht40,
-		    (int) (int8_t) ((rx->wr_v.vh_rssi) & 0xff),
-		    (int) (int8_t) ((rx->wr_v.rssi_ctl[0]) & 0xff),
-		    (int) (int8_t) ((rx->wr_v.rssi_ctl[1]) & 0xff),
-		    (int) (int8_t) ((rx->wr_v.rssi_ctl[2]) & 0xff),
-		    (int) (int8_t) ((rx->wr_v.rssi_ext[0]) & 0xff),
-		    (int) (int8_t) ((rx->wr_v.rssi_ext[1]) & 0xff),
-		    (int) (int8_t) ((rx->wr_v.rssi_ext[2]) & 0xff)
-		    );
-		print_evm(&e);
-
-		printf("\n");
-	}
+	pkt_parse(chip, rh, vh, tsf, chan_flags, pkt, len);
 }
 
 static pcap_t *
@@ -304,12 +123,12 @@ open_online(const char *ifname)
 
 	/* XXX pcap_is_swapped() ? */
 
+#if 0
 	if (! pkt_compile(p, &fp)) {
 		pcap_perror(p, "pkg_compile compile error\n");
 		return (NULL);
 	}
 
-#if 0
 	if (pcap_setfilter(p, &fp) != 0) {
 		printf("pcap_setfilter failed\n");
 		return (NULL);
@@ -368,7 +187,7 @@ main(int argc, const char *argv[])
 		    hdr->len, hdr->caplen);
 #endif
 		if (r > 0)
-			pkt_handle(chip, pkt, hdr->caplen);
+			pkt_handle(chip, (const char *) pkt, hdr->caplen);
 	}
 
 	pcap_close(p);
