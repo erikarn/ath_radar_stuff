@@ -242,7 +242,7 @@ pkt_handle(int chip, const char *pkt, int len)
 		rx_lastaggr = 1;
 	}
 
-	if (rx_isht && (! rx_isaggr || rx_lastaggr)) {
+	if (1 || rx_isht && (! rx_isaggr || rx_lastaggr)) {
 		populate_evm(&e, evm, rx_hwrate, rx_isht40);
 
 		printf("ts=%llu: rs_status=0x%x, chainmask=0x%x, "
