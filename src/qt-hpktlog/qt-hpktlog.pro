@@ -6,7 +6,7 @@ TEMPLATE = app
 TARGET = 
 DEPENDPATH += .
 INCLUDEPATH += . ../../lib/ /usr/local/include/qt4 /usr/local/include/qwt6
-LIBS+=	-L../../lib/libradarpkt -lpcap -lradarpkt -lqwt6
+LIBS+=	-L../../lib/libradarpkt -L../../lib/libradiotap -lpcap -lradarpkt -lradiotap -lqwt6
 
 QMAKE_CFLAGS=	-g -ggdb -DATH_ENABLE_RADIOTAP_VENDOR_EXT
 QMAKE_CXXFLAGS=	-g -ggdb -DATH_ENABLE_RADIOTAP_VENDOR_EXT

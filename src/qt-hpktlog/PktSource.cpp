@@ -47,7 +47,7 @@ PktSource::Load(const char *filename)
 	return (true);
 }
 
-#define	PKTRULE	"radio[73] == 0x2 && (radio[72] == 5 || radio[72] == 24)"
+#define	PKTRULE "radio[77] == 0x2 && (radio[76] == 5 || radio[76] == 24 || radio[76] == 38)"
 
 bool
 PktSource::OpenLive(const char *ifname)
@@ -57,7 +57,7 @@ PktSource::OpenLive(const char *ifname)
 
 	this->Close();
 
-	PcapHdl = pcap_open_live(ifname, 65536, 1, 1000, errbuf);
+	PcapHdl = pcap_open_live(ifname, 65536, 1, 100, errbuf);
 	if (! PcapHdl) {
 		err(1, "pcap_create: %s\n", errbuf);
 		return (false);
