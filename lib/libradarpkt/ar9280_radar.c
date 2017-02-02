@@ -264,10 +264,12 @@ ar9280_radar_spectral_decode_ht40(struct ieee80211_radiotap_header *rh,
 	struct radar_fft_entry *fe;
 
 	if (len < AR9280_SPECTRAL_SAMPLE_SIZE_HT40) {
+#if 0
 		printf("%s: got %d bytes, wanted %d bytes\n",
 		    __func__,
 		    len,
 		    AR9280_SPECTRAL_SAMPLE_SIZE_HT40);
+#endif
 		return (-1);
 	}
 
