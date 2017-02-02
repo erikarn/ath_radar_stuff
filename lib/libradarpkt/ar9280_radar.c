@@ -432,7 +432,7 @@ ar9280_radar_decode(struct ieee80211_radiotap_header *rh,
 	 * HAL/DFS code, so they can all be plotted as appropriate.
 	 */
 
-#if 1
+#if 0
 	printf("tsf: %llu", (unsigned long long) tsf);
 	printf(" len: %d", len);
 	printf(" rssi %d/%d", comb_rssi, nf);
