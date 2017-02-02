@@ -156,7 +156,7 @@ open_online(const char *ifname)
 	char errbuf[PCAP_ERRBUF_SIZE];
 	struct bpf_program fp;
 
-	p = pcap_open_live(ifname, 65536, 1, 1000, errbuf);
+	p = pcap_open_live(ifname, 65536, 1, 100, errbuf);
 	if (! p) {
 		err(1, "pcap_create: %s\n", errbuf);
 		return (NULL);
