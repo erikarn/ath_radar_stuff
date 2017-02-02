@@ -12,6 +12,8 @@ struct fft_display {
 	SDL_Surface *screen;
 	TTF_Font *font;
 	struct fft_histogram *fh;
+	int x_scale;
+	int y_scale;
 };
 
 extern	struct fft_display * fft_display_create(SDL_Surface *screen,

@@ -199,6 +199,8 @@ fft_display_create(SDL_Surface *screen, TTF_Font *font,
 	fdisp->screen = screen;
 	fdisp->font = font;
 	fdisp->fh = fh;
+	fdisp->x_scale = 5;
+	fdisp->y_scale = 4;
 	return (fdisp);
 }
 
@@ -252,7 +254,7 @@ fft_display_draw_picture(struct fft_display *fdisp, int highlight,
 
 	/* vertical lines (frequency) */
 	for (i = 2300; i < 6000; i += 10) {
-		x = (X_SCALE * (i - startfreq));
+		x = (fdisp->x_scale * (i - startfreq));
 
 		if (x < 0 || x > WIDTH)
 			continue;
@@ -268,7 +270,7 @@ fft_display_draw_picture(struct fft_display *fdisp, int highlight,
 
 	/* and now, the channel lines, at least for channels 1-14 */
 	for (i = 0; i < nchans; i++) {
-		x = (X_SCALE * (chans[i] - startfreq));
+		x = (fdisp->x_scale * (chans[i] - startfreq));
 		if (x < 0 || x > WIDTH)
 
 			continue;
@@ -279,7 +281,7 @@ fft_display_draw_picture(struct fft_display *fdisp, int highlight,
 
 	/* horizontal lines (dBm) */
 	for (i = 0; i < 150; i += 10) {
-		y = 600 - Y_SCALE * i;
+		y = 600 - fdisp->y_scale * i;
 		
 		for (x = 0; x < WIDTH; x++)
 			pixels[x + y * WIDTH] = 0x40404040 | AMASK;
@@ -296,7 +298,7 @@ fft_display_draw_picture(struct fft_display *fdisp, int highlight,
 		int freqKhz = i;
 		int16_t *s;
 
-		x = X_SCALE * (freqKhz - (startfreq * 1000)) / 1000;
+		x = fdisp->x_scale * (freqKhz - (startfreq * 1000)) / 1000;
 
 		if (x < 0 || x > WIDTH)
 			continue;
@@ -312,7 +314,7 @@ fft_display_draw_picture(struct fft_display *fdisp, int highlight,
 			signal = (float) s[j];
 			color = BMASK | AMASK;
 			opacity = 64;
-			y = 400 - (400.0 + Y_SCALE * signal);
+			y = 400 - (400.0 + fdisp->y_scale * signal);
 			if (bighotpixel(pixels, x, y, color, opacity) < 0)
 				continue;
 		}
@@ -321,7 +323,7 @@ fft_display_draw_picture(struct fft_display *fdisp, int highlight,
 		signal = (float) fft_fetch_freq_max(fdisp->fh, freqKhz);
 		color = RMASK | AMASK;
 		opacity = 128;
-		y = 400 - (400.0 + Y_SCALE * signal);
+		y = 400 - (400.0 + fdisp->y_scale * signal);
 		if (bigpixel(pixels, x, y, color, opacity) < 0)
 			continue;
 	}
