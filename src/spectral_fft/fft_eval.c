@@ -205,19 +205,27 @@ void graphics_main(struct fft_app *fap)
 		case SDL_KEYDOWN:
 			switch (event.key.keysym.sym) {
 			case SDLK_LEFT:
-				fap->accel-= 2;
+				if (fap->accel > 0)
+					fap->accel = 0;
+				else
+					fap->accel -= 2;
 				fap->scroll = 1;
 				break;
 			case SDLK_RIGHT:
-				fap->accel+= 2;
+				if (fap->accel < 0)
+					fap->accel = 0;
+				else
+					fap->accel += 2;
 				fap->scroll = 1;
 				break;
 			case SDLK_HOME:
 				fap->startfreq = 2300;
+				fap->scroll = 1;
 				fap->accel = 0;
 				break;
 			case SDLK_END:
 				fap->startfreq = 5100;
+				fap->scroll = 1;
 				fap->accel = 0;
 				break;
 			default:
