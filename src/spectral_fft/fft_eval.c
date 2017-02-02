@@ -206,6 +206,14 @@ void graphics_main(struct fft_app *fap)
 					fap->accel += 2;
 				fap->scroll = 1;
 				break;
+			case SDLK_UP:
+				if (fap->fdisp->x_scale > 1)
+					fap->fdisp->x_scale--;
+				break;
+			case SDLK_DOWN:
+				if (fap->fdisp->x_scale < 10)
+					fap->fdisp->x_scale++;
+				break;
 			case SDLK_HOME:
 				fap->startfreq = 2300;
 				fap->scroll = 1;
