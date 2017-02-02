@@ -49,24 +49,12 @@
 #include "fft_histogram.h"
 #include "fft_display.h"
 
+#include "fft_app.h"
+
 /* 5 a second for now, the rendering is too inefficient otherwise? */
 #define	RENDER_PERIOD_MSEC	100
 
 #define	LCL_EVENT_RENDER	69
-
-struct fft_app {
-	pthread_mutex_t mtx_histogram;
-	SDL_Surface *screen;
-	SDL_TimerID rendering_timer_id;
-	int g_do_update;
-	TTF_Font *font;
-	struct fft_display *fdisp;
-	struct fft_histogram *fh;
-	int highlight_freq;
-	int startfreq;
-	int accel;
-	int scroll;
-};
 
 int graphics_init_sdl(struct fft_app *fap)
 {
