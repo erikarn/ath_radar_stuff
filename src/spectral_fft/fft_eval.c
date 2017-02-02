@@ -50,7 +50,7 @@
 #include "fft_display.h"
 
 /* 5 a second for now, the rendering is too inefficient otherwise? */
-#define	RENDER_PERIOD_MSEC	200
+#define	RENDER_PERIOD_MSEC	100
 
 #define	LCL_EVENT_RENDER	69
 
