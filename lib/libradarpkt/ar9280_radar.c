@@ -38,8 +38,10 @@
 #include <sys/socket.h>
 #include <net/if.h>
 
+#include "net80211/_ieee80211.h"
 #include "net80211/ieee80211.h"
-#include "net80211/ieee80211_radiotap.h"
+
+#include "libradiotap/radiotap.h"
 
 #include "dev/ath/if_athioctl.h"
 
@@ -185,6 +187,8 @@ ar9280_radar_spectral_print(struct radar_fft_entry *fe)
 		    printf("\n");
 	}
 	printf("\n");
+
+	return (0);
 }
 
 /* XXX why do we need this? */
@@ -428,8 +432,8 @@ ar9280_radar_decode(struct ieee80211_radiotap_header *rh,
 	 * HAL/DFS code, so they can all be plotted as appropriate.
 	 */
 
-#if 0
-	printf("tsf: %lld", tsf);
+#if 1
+	printf("tsf: %llu", (unsigned long long) tsf);
 	printf(" len: %d", len);
 	printf(" rssi %d/%d", comb_rssi, nf);
 	printf(", pri/ext rssi: %d/%d", pri_rssi, ext_rssi);

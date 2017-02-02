@@ -8,7 +8,8 @@ SRCS+=	chan.c
 # and include it, but I digress..
 
 CFLAGS+=	-I/home/adrian/work/freebsd/head/src/sys -g -ggdb	\
-	    -DATH_ENABLE_RADIOTAP_VENDOR_EXT -g -ggdb -pthread
+	    -DATH_ENABLE_RADIOTAP_VENDOR_EXT -g -ggdb -pthread		\
+	    -I../../lib/
 
 MK_MAN=	no
 

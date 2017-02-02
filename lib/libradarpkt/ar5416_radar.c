@@ -40,7 +40,8 @@
 #include <sys/queue.h>
 
 #include "net80211/ieee80211.h"
-#include "net80211/ieee80211_radiotap.h"
+
+#include "libradiotap/radiotap.h"
 
 #include "dev/ath/if_athioctl.h"
 

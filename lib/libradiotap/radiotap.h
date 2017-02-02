@@ -37,6 +37,8 @@
 
 #include <stdint.h>
 
+#include <net80211/_ieee80211.h>
+
 /* Base version of the radiotap packet header data */
 #define PKTHDR_RADIOTAP_VERSION		0
 
@@ -54,6 +56,13 @@
  * function of...") that I cannot set false expectations for lawyerly
  * readers.
  */
+
+struct ieee80211_radiotap_vendor_header {
+	uint8_t		vh_oui[3];	/* 3 byte vendor OUI */
+	uint8_t		vh_sub_ns;	/* Sub namespace of this section */
+	uint16_t	vh_skip_len;	/* Length of this vendor section */
+} __packed;
+
 
 /* The radio capture header precedes the 802.11 header.
  * All data in the header is little endian on all platforms.
@@ -224,6 +233,7 @@ enum ieee80211_radiotap_type {
 	IEEE80211_RADIOTAP_EXT = 31
 };
 
+#if 0
 /* Channel flags. */
 #define	IEEE80211_CHAN_TURBO	0x0010	/* Turbo channel */
 #define	IEEE80211_CHAN_CCK	0x0020	/* CCK channel */
@@ -233,6 +243,7 @@ enum ieee80211_radiotap_type {
 #define	IEEE80211_CHAN_PASSIVE	0x0200	/* Only passive scan allowed */
 #define	IEEE80211_CHAN_DYN	0x0400	/* Dynamic CCK-OFDM channel */
 #define	IEEE80211_CHAN_GFSK	0x0800	/* GFSK channel (FHSS PHY) */
+#endif
 
 /* For IEEE80211_RADIOTAP_FLAGS */
 #define	IEEE80211_RADIOTAP_F_CFP	0x01	/* sent/received

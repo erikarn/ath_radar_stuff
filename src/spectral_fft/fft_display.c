@@ -42,8 +42,8 @@
  */
 #if 1
 #include "net80211/ieee80211.h"
-#include "net80211/ieee80211_radiotap.h"
 
+#include "libradiotap/radiotap.h"
 #include "libradarpkt/pkt.h"
 #include "libradarpkt/ar5212_radar.h"
 #include "libradarpkt/ar5416_radar.h"

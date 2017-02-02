@@ -33,7 +33,7 @@
  *    'radio[73] == 0x2 && (radio[72] == 5 || radio[72] == 24)
  */
 
-#define	PKTRULE "radio[73] == 0x2 && (radio[72] == 5 || radio[72] == 24 || radio[72] == 36)"
+#define	PKTRULE "radio[73] == 0x2 && (radio[72] == 5 || radio[72] == 24 || radio[72] == 38)"
 
 static int
 pkt_compile(pcap_t *p, struct bpf_program *fp)
@@ -188,10 +188,12 @@ open_online(const char *ifname)
 		return (NULL);
 	}
 
+#if 1
 	if (pcap_setfilter(p, &fp) != 0) {
 		printf("pcap_setfilter failed\n");
 		return (NULL);
 	}
+#endif
 
 	return (p);
 }
@@ -254,7 +256,7 @@ main(int argc, const char *argv[])
 	 * XXX access method is a non-standard hack atm.
 	 */
 	while ((r = pcap_next_ex(p, &hdr, &pkt)) >= 0) {
-#if 0
+#if 1
 		printf("capture: len=%d, caplen=%d\n",
 		    hdr->len, hdr->caplen);
 #endif

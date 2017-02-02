@@ -1,6 +1,6 @@
 .include <bsd.own.mk>
 
-SUBDIR=pktlog qt-hpktlog
+SUBDIR=pktlog spectral_fft
 
 .include <bsd.subdir.mk>
 
