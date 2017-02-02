@@ -200,9 +200,6 @@ fft_pcap_thread_main(void *arg)
 	/*
 	 * Iterate over frames, looking for radiotap frames
 	 * which have PHY errors.
-	 *
-	 * XXX We should compile a filter for this, but the
-	 * XXX access method is a non-standard hack atm.
 	 */
 	while ((r = pcap_next_ex(g_p, &hdr, &pkt)) >= 0) {
 #if 0
