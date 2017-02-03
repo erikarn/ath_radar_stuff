@@ -3,7 +3,7 @@
 #include <sys/endian.h>
 #include <err.h>
 
-#include "net80211/ieee80211_radiotap.h"
+#include "libradiotap/radiotap.h"
 
 #include "PktSource.h"
 
@@ -47,7 +47,7 @@ PktSource::Load(const char *filename)
 	return (true);
 }
 
-#define	PKTRULE "radio[77] == 0x2 && (radio[76] == 5 || radio[76] == 24 || radio[76] == 38)"
+#define	PKTRULE "(radio[77] & 0x2 == 0x2) && (radio[76] == 5 || radio[76] == 24 || radio[76] == 38)"
 
 bool
 PktSource::OpenLive(const char *ifname)

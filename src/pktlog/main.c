@@ -27,13 +27,13 @@
 
 /*
  * Compile up a rule that's bound to be useful - it only matches on
- * radar errors.
+ * radar errors and spectral scan results (38 on AR9380 and later.)
  *
  * tcpdump -ni wlan0 -y IEEE802_11_RADIO -x -X -s0 -v -ve \
- *    'radio[73] == 0x2 && (radio[72] == 5 || radio[72] == 24)
+ *    '(radio[77] & 0x2 == 0x2) && (radio[72] == 5 || radio[72] == 24)
  */
 
-#define	PKTRULE "radio[77] == 0x2 && (radio[76] == 5 || radio[76] == 24 || radio[76] == 38)"
+#define	PKTRULE "(radio[77] & 0x2 == 0x2) && (radio[76] == 5 || radio[76] == 24 || radio[76] == 38)"
 
 static int
 pkt_compile(pcap_t *p, struct bpf_program *fp)
@@ -170,7 +170,7 @@ open_online(const char *ifname)
 	char errbuf[PCAP_ERRBUF_SIZE];
 	struct bpf_program fp;
 
-	p = pcap_open_live(ifname, 65536, 1, 1000, errbuf);
+	p = pcap_open_live(ifname, 65536, 1, 100, errbuf);
 	if (! p) {
 		err(1, "pcap_create: %s\n", errbuf);
 		return (NULL);
@@ -256,9 +256,11 @@ main(int argc, const char *argv[])
 	 * XXX access method is a non-standard hack atm.
 	 */
 	while ((r = pcap_next_ex(p, &hdr, &pkt)) >= 0) {
+		if (r == 0)
+			continue;
 #if 1
-		printf("capture: len=%d, caplen=%d\n",
-		    hdr->len, hdr->caplen);
+		printf("capture: len=%d, caplen=%d, r=%d\n",
+		    hdr->len, hdr->caplen, r);
 #endif
 		if (r > 0)
 			pkt_handle(chip, pkt, hdr->caplen);

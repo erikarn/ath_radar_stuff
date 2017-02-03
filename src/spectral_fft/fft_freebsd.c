@@ -37,9 +37,10 @@ set_scandata_callback(scandata_cb cb, void *cbdata)
  * radar errors.
  *
  * tcpdump -ni wlan0 -y IEEE802_11_RADIO -x -X -s0 -v -ve \
- *    'radio[73] == 0x2 && (radio[72] == 5 || radio[72] == 24)
+ *    '(radio[73] & 0x2 == 0x2) && (radio[72] == 5 || radio[72] == 24)
  */
-#define	PKTRULE "radio[77] == 0x2 && (radio[76] == 5 || radio[76] == 24 || radio[76] == 38)"
+#define	PKTRULE "(radio[77] & 0x2 == 0x2) && (radio[76] == 5 || radio[76] == 24 || radio[76] == 38)"
+
 
 static int
 pkt_compile(pcap_t *p, struct bpf_program *fp)
